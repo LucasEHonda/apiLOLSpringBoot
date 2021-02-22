@@ -7,5 +7,5 @@ public interface SummonerController {
 
     public String getSummonerByName(@PathVariable("summonerName") String summonerName);
 
-    public String getMatchlist(@PathVariable("summonerName") String summonerName);
+    public String getMatchList(@PathVariable("summonerName") String summonerName);
 }
