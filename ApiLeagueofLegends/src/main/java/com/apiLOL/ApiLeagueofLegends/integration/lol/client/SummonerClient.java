@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 
 @FeignClient(name = "summonerName", url = "https://br1.api.riotgames.com/lol/")
-//@FeignClient(name = "summonerName", url = "https://br1.api.riotgames.com/lol/summoner/v4/summoners/by-name/marcohades?api_key=RGAPI-0f0a8a83-2478-44fe-8805-ccdbd68c2c66")
-
 public interface SummonerClient {
     @GetMapping("summoner/v4/summoners/by-name/{summonerName}")
     Summoner getSummonerByName(@PathVariable("summonerName") String summonerName, @RequestParam(value="api_key") String apiKey);

@@ -19,8 +19,9 @@ public class SummonerControllerImpl implements SummonerController {
     @Autowired
     SummonerServiceImpl summonerService;
 
+
     @Override
-    @GetMapping( path = "/{summonerName}")
+    @GetMapping( path = "account/{summonerName}")
     public String getSummonerByName(@PathVariable("summonerName") String summonerName) {
         return summonerService.getNamePlusLevel(summonerName);
     }

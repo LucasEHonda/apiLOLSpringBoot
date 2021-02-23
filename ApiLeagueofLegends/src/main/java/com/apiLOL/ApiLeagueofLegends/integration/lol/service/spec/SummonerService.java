@@ -4,4 +4,5 @@ import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
 
 public interface SummonerService {
     public String getNamePlusLevel(String summonerName);
+    public String getLastTenMatchQuantity(String summonerName);
 }
