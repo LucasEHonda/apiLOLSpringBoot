@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.List;
 
 public interface SummonerController {
-
     public String getSummonerByName(@PathVariable("summonerName") String summonerName);
 
     public LastTenMatchesResponse getMatchList(@PathVariable("summonerName") String summonerName);
