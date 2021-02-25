@@ -7,10 +7,10 @@ import lombok.Data;
 @Builder
 public class HistoryMatchesResponse {
     String frag;
-    float kda;
+    String kda;
     String pKills;
     boolean win;
     int visionScore;
     String time;
-    int champion;
+    String champion;
 }

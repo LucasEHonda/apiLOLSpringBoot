@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.text.DecimalFormat;
 import java.util.*;
 
 @Service
@@ -28,6 +29,7 @@ public class SummonerServiceImpl implements SummonerService {
     @Autowired
     ChampionClient championClient;
 
+    //String championsListResponse = championClient.getChampions();
 
     @Override
     public String getNamePlusLevel(String summonerName) {
@@ -45,10 +47,6 @@ public class SummonerServiceImpl implements SummonerService {
         List<Integer> timesPlayed = new ArrayList<>();
         List<Integer> championId = new ArrayList<>();
         Date dataAgora = new Date();
-        String championsListResponse = championClient.getChampions();
-        ObjectMapper objectMapper = new ObjectMapper();
-        String champName = "";
-        String champKey = "";
 
         //long matchesPlayed = matches.stream().filter(match -> ((dataAgora.getTime() - match.getTimestamp()) / (1000*60*60*24)) <= 10 ).count();
         //Aqui nos contamos o numero de partidas nos ultimos 10 dias.
@@ -69,20 +67,7 @@ public class SummonerServiceImpl implements SummonerService {
             //Aqui nos separamos em duas listas o dict feito acima.
         }
 
-        try {
-            JsonNode jsonnode = objectMapper.readTree(championsListResponse);
-            for (Iterator<String> it = jsonnode.get("data").fieldNames(); it.hasNext();) {
-                String champ = it.next();
-                champName =jsonnode.get("data").get(champ).get("name").asText();
-                champKey = jsonnode.get("data").get(champ).get("key").asText();
-                if (champKey.equals(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))))){
-                    //Aqui nos fazemos o request para a API para descobrir qual o champ pelo ID dele.
-                    break;
-                }
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+        String champName = getChampion(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed))));
 
         return LastTenMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
 }
@@ -92,28 +77,32 @@ public class SummonerServiceImpl implements SummonerService {
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
         SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
         List<MatchListResponse> matches = summonerHistory.getMatches();
-        List<MatchResponse> listOfmatches = new ArrayList<>();
+        List<MatchResponse> listOfMatches = new ArrayList<>();
         List<MatchParticipantsIdentitiesResponse> participants = new ArrayList<>();
-        HistoryMatchesResponse historyMatchesResponse;
         List<HistoryMatchesResponse> listHistoryMatchesResponses = new ArrayList<>();
+
+        //o for abaixo pode ser excluido e colocado no abaixo desse.
         for (int i = 0; i < 10;i++){
-            listOfmatches.add(summonerClient.getMatchDetails(Long.toString(matches.get(i).getGameId()),apiKey));
+            listOfMatches.add(summonerClient.getMatchDetails(Long.toString(matches.get(i).getGameId()),apiKey));
         }
-        for (int l = 0; l < listOfmatches.size() ; l++){
-        participants = listOfmatches.get(l).getParticipantIdentities();
+        for (int l = 0; l < listOfMatches.size() ; l++){
+        participants = listOfMatches.get(l).getParticipantIdentities();
             for (int i = 0; i < 10 ;i++){
-                if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summonerName)) == 0) {
+                if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summoner.getName())) == 0) {
                     for (int k = 0; k < 10 ;k++) {
-                        if ((participants.get(i).getParticipantId()) == (listOfmatches.get(l).getParticipants().get(k).getParticipantId())) {
-                            String frag = listOfmatches.get(l).getParticipants().get(k).getStats().getKills()+"/"+listOfmatches.get(l).getParticipants().get(k).getStats().getDeaths()+"/"+listOfmatches.get(l).getParticipants().get(k).getStats().getAssists();
-                            //float kda = ((listOfmatches.get(l).getParticipants().get(k).getStats().getKills() + listOfmatches.get(l).getParticipants().get(k).getStats().getAssists())/listOfmatches.get(l).getParticipants().get(k).getStats().getDeaths());
+                        if ((participants.get(i).getParticipantId()) == (listOfMatches.get(l).getParticipants().get(k).getParticipantId())) {
+                            List<Integer> globalFrag = getGlobalFrag( listOfMatches.get(l).getParticipants(), listOfMatches.get(l).getParticipants().get(k).getTeamId());
+                            String frag = listOfMatches.get(l).getParticipants().get(k).getStats().getKills()+"/"+listOfMatches.get(l).getParticipants().get(k).getStats().getDeaths()+"/"+listOfMatches.get(l).getParticipants().get(k).getStats().getAssists();
+                            float kda = (( (float) listOfMatches.get(l).getParticipants().get(k).getStats().getKills() +  (float) listOfMatches.get(l).getParticipants().get(k).getStats().getAssists())/ (float) listOfMatches.get(l).getParticipants().get(k).getStats().getDeaths());
+                            String pKillls = ((listOfMatches.get(l).getParticipants().get(k).getStats().getKills() + listOfMatches.get(l).getParticipants().get(k).getStats().getAssists())*100)/globalFrag.get(0) + "%";
                             listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
                                     .frag(frag)
-                                    //.kda(kda)
-                                    .champion(listOfmatches.get(l).getParticipants().get(k).getChampionId())
-                                    .win(listOfmatches.get(l).getParticipants().get(k).getStats().isWin())
-                                    .time((listOfmatches.get(l).getGameDuration()/60)+" min.")
-                                    .visionScore(listOfmatches.get(l).getParticipants().get(k).getStats().getVisionScore())
+                                    .kda(new DecimalFormat("#0.##").format( kda ))
+                                    .champion(getChampion(listOfMatches.get(l).getParticipants().get(k).getChampionId()))
+                                    .win(listOfMatches.get(l).getParticipants().get(k).getStats().isWin())
+                                    .time((listOfMatches.get(l).getGameDuration()/60)+" min.")
+                                    .visionScore(listOfMatches.get(l).getParticipants().get(k).getStats().getVisionScore())
+                                    .pKills(pKillls)
                                     .build());
                         }
                     }
@@ -122,5 +111,49 @@ public class SummonerServiceImpl implements SummonerService {
         }
        return listHistoryMatchesResponses;
     }
+
+    private String getChampion(int champId){
+        ObjectMapper objectMapper = new ObjectMapper();
+        String championsListResponse = championClient.getChampions();
+        String champName = "";
+        String champKey = "";
+
+
+        try {
+            JsonNode jsonnode = objectMapper.readTree(championsListResponse);
+            for (Iterator<String> it = jsonnode.get("data").fieldNames(); it.hasNext();) {
+                String champ = it.next();
+                champName =jsonnode.get("data").get(champ).get("name").asText();
+                champKey = jsonnode.get("data").get(champ).get("key").asText();
+                if (champKey.equals(Integer.toString(champId))){
+                    //Aqui nos fazemos o request para a API para descobrir qual o champ pelo ID dele.
+                    break;
+                }
+            }
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return champName;
+    }
+
+    private List<Integer> getGlobalFrag(List<MatchParticipantsResponse> participants, int teamId){
+        List<Integer> frag = new ArrayList<>();
+        int deaths = 0;
+        int kills = 0;
+        int assists = 0;
+
+        for (int i = 0;i< participants.size();i++){
+            if(participants.get(i).getTeamId() == teamId){
+                deaths = deaths + participants.get(i).getStats().getDeaths();
+                kills = kills + participants.get(i).getStats().getKills();
+                assists = assists + participants.get(i).getStats().getAssists();
+            }
+        }
+        frag.add(kills);
+        frag.add(deaths);
+        frag.add(assists);
+        return frag;
+    }
+
 
 }
