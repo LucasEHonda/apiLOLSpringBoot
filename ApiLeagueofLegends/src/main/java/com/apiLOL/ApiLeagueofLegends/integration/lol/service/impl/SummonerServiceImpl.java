@@ -1,12 +1,11 @@
 package com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl;
 
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.ChampionClient;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
-import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastMatchesResponse;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.MatchListResponse;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.MatchResponse;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.SummonerMatchListResponse;
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
+import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.*;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.spec.SummonerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,7 +35,8 @@ public class SummonerServiceImpl implements SummonerService {
         return (summoner.getName() + " " + "Nivel: " + summoner.getSummonerLevel());
     }
 
-    public LastMatchesResponse getLastTenMatchQuantity(String summonerName){
+    public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName){
+
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
         SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
         List<MatchListResponse> matches = summonerHistory.getMatches();
@@ -60,38 +60,69 @@ public class SummonerServiceImpl implements SummonerService {
             }
         }
 
-        if (lastTenMatches.size()>=1) {
-            lastTenMatches.forEach(champion -> champCount.compute(champion, (k, v) -> v == null ? 1 : ++v));
-            //Aqui nos armazenamos num dict o numero de partidas jogadas por campeao nos ultimos 10 dias.
-            for (Map.Entry<Integer, Integer> champion : champCount.entrySet()) {
-                timesPlayed.add(champion.getValue());
-                championId.add(champion.getKey());
-                //Aqui nos separamos em duas listas o dict feito acima.
-            }
 
-            try {
-                JsonNode jsonnode = objectMapper.readTree(championsListResponse);
-                for (Iterator<String> it = jsonnode.get("data").fieldNames(); it.hasNext();) {
-                    String champ = it.next();
-                    champName =jsonnode.get("data").get(champ).get("name").asText();
-                    champKey = jsonnode.get("data").get(champ).get("key").asText();
-                    if (champKey.equals(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))))){
-                        //Aqui nos fazemos o request para a API para descobrir qual o champ pelo ID dele.
-                        break;
+        lastTenMatches.forEach(champion -> champCount.compute(champion, (k, v) -> v == null ? 1 : ++v));
+        //Aqui nos armazenamos num dict o numero de partidas jogadas por campeao nos ultimos 10 dias.
+        for (Map.Entry<Integer, Integer> champion : champCount.entrySet()) {
+            timesPlayed.add(champion.getValue());
+            championId.add(champion.getKey());
+            //Aqui nos separamos em duas listas o dict feito acima.
+        }
+
+        try {
+            JsonNode jsonnode = objectMapper.readTree(championsListResponse);
+            for (Iterator<String> it = jsonnode.get("data").fieldNames(); it.hasNext();) {
+                String champ = it.next();
+                champName =jsonnode.get("data").get(champ).get("name").asText();
+                champKey = jsonnode.get("data").get(champ).get("key").asText();
+                if (champKey.equals(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))))){
+                    //Aqui nos fazemos o request para a API para descobrir qual o champ pelo ID dele.
+                    break;
+                }
+            }
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        return LastTenMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
+}
+
+    public List<HistoryMatchesResponse> getMatchDetailsBySummonerName(String summonerName){
+
+        Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
+        SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
+        List<MatchListResponse> matches = summonerHistory.getMatches();
+        List<MatchResponse> listOfmatches = new ArrayList<>();
+        List<MatchParticipantsIdentitiesResponse> participants = new ArrayList<>();
+        HistoryMatchesResponse historyMatchesResponse;
+        List<HistoryMatchesResponse> listHistoryMatchesResponses = new ArrayList<>();
+        for (int i = 0; i < 10;i++){
+            listOfmatches.add(summonerClient.getMatchDetails(Long.toString(matches.get(i).getGameId()),apiKey));
+        }
+        for (int l = 0; l < listOfmatches.size() ; l++){
+        participants = listOfmatches.get(l).getParticipantIdentities();
+            for (int i = 0; i < 10 ;i++){
+                if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summonerName)) == 0) {
+                    for (int k = 0; k < 10 ;k++) {
+                        if ((participants.get(i).getParticipantId()) == (listOfmatches.get(l).getParticipants().get(k).getParticipantId())) {
+                            String frag = listOfmatches.get(l).getParticipants().get(k).getStats().getKills()+"/"+listOfmatches.get(l).getParticipants().get(k).getStats().getDeaths()+"/"+listOfmatches.get(l).getParticipants().get(k).getStats().getAssists();
+                            //float kda = ((listOfmatches.get(l).getParticipants().get(k).getStats().getKills() + listOfmatches.get(l).getParticipants().get(k).getStats().getAssists())/listOfmatches.get(l).getParticipants().get(k).getStats().getDeaths());
+                            listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
+                                    .frag(frag)
+                                    //.kda(kda)
+                                    .champion(listOfmatches.get(l).getParticipants().get(k).getChampionId())
+                                    .win(listOfmatches.get(l).getParticipants().get(k).getStats().isWin())
+                                    .time((listOfmatches.get(l).getGameDuration()/60)+" min.")
+                                    .visionScore(listOfmatches.get(l).getParticipants().get(k).getStats().getVisionScore())
+                                    .build());
+                        }
                     }
                 }
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
             }
-
-            return LastMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
-            //return ("Ola " + summoner.getName() + " nos ultimos 10 dias voce jogou " + lastTenMatches.size() + " Partidas. Seu champion mais jogado foi o: "+champName);
         }
-        return LastMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
-    }
 
-    public MatchResponse getMatchDetails(String gameId){
-       return summonerClient.getMatchDetails(gameId,apiKey);
+        System.out.println(listHistoryMatchesResponses);
+       return listHistoryMatchesResponses;
     }
 
 }

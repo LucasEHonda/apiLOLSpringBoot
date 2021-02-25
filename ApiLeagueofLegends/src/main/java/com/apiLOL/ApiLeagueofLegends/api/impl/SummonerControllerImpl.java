@@ -1,8 +1,8 @@
 package com.apiLOL.ApiLeagueofLegends.api.impl;
 
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.api.spec.SummonerController;
-import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastMatchesResponse;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.MatchResponse;
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl.SummonerServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 
 
 @RestController
@@ -30,13 +31,13 @@ public class SummonerControllerImpl implements SummonerController {
 
     @Override
     @GetMapping( path = "historico/{summonerName}")
-    public LastMatchesResponse getMatchList(@PathVariable("summonerName") String summonerName) {
+    public LastTenMatchesResponse getMatchList(@PathVariable("summonerName") String summonerName) {
         return summonerService.getLastTenMatchQuantity(summonerName);
     }
 
 
-    @GetMapping(path = "historico/detalhes/{matchId}")
-    public MatchResponse getMatchDetails(@PathVariable("matchId") String matchId){
-        return summonerService.getMatchDetails(matchId);
+    @GetMapping(path = "historico/detalhes/{summonerName}")
+    public List<HistoryMatchesResponse> getMatchDetails(@PathVariable("summonerName") String summonerName){
+        return summonerService.getMatchDetailsBySummonerName(summonerName);
     }
 }

@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class LastMatchesResponse {
+public class LastTenMatchesResponse {
     String summonerName;
     int matchesPlayedLastTenDays;
     String mustPlayedChamp;
