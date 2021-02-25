@@ -13,4 +13,5 @@ public class Summoner {
     int profileIconId;
     long revisionDate;
     int summonerLevel;
+    String summonerName;
 }
