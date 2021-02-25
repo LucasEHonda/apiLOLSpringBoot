@@ -7,7 +7,7 @@ import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.MatchResponse;
 import java.util.List;
 
 public interface SummonerService {
-    
+
     public String getNamePlusLevel(String summonerName);
     public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName);
     public List<HistoryMatchesResponse> getMatchDetailsBySummonerName(String summonerName);
