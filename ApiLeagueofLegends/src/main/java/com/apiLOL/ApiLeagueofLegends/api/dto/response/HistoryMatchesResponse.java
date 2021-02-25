@@ -13,5 +13,4 @@ public class HistoryMatchesResponse {
     int visionScore;
     String time;
     int champion;
-
 }
