@@ -120,8 +120,6 @@ public class SummonerServiceImpl implements SummonerService {
                 }
             }
         }
-
-        System.out.println(listHistoryMatchesResponses);
        return listHistoryMatchesResponses;
     }
 

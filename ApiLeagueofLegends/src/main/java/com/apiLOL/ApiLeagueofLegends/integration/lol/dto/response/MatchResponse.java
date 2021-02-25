@@ -19,7 +19,7 @@ public class MatchResponse {
     int queueId;
     int seasonId;
     List<MatchParticipantsResponse> participants;
-    
+
     List<MatchParticipantsIdentitiesResponse> participantIdentities;
 
 }
