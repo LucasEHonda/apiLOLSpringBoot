@@ -29,6 +29,7 @@ public class SummonerServiceImpl implements SummonerService {
     @Autowired
     ChampionClient championClient;
 
+
     //String championsListResponse = championClient.getChampions();
 
     @Override
@@ -40,6 +41,7 @@ public class SummonerServiceImpl implements SummonerService {
     public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName){
 
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
+        String championsListResponse = championClient.getChampions();
         SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
         List<MatchListResponse> matches = summonerHistory.getMatches();
         List<Integer> lastTenMatches = new ArrayList<>();
@@ -57,8 +59,6 @@ public class SummonerServiceImpl implements SummonerService {
                 //Aqui nos armazenamos numa lista numero de partidas nos ultimos 10.
             }
         }
-
-
         lastTenMatches.forEach(champion -> champCount.compute(champion, (k, v) -> v == null ? 1 : ++v));
         //Aqui nos armazenamos num dict o numero de partidas jogadas por campeao nos ultimos 10 dias.
         for (Map.Entry<Integer, Integer> champion : champCount.entrySet()) {
@@ -67,54 +67,47 @@ public class SummonerServiceImpl implements SummonerService {
             //Aqui nos separamos em duas listas o dict feito acima.
         }
 
-        String champName = getChampion(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed))));
+        String champName = getChampionName(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed))),championsListResponse);
 
         return LastTenMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
 }
 
     public List<HistoryMatchesResponse> getMatchDetailsBySummonerName(String summonerName){
-
+        String championsListResponse = championClient.getChampions();
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
-        SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
-        List<MatchListResponse> matches = summonerHistory.getMatches();
-        List<MatchResponse> listOfMatches = new ArrayList<>();
-        List<MatchParticipantsIdentitiesResponse> participants = new ArrayList<>();
+        List<MatchListResponse> matches = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey).getMatches();
         List<HistoryMatchesResponse> listHistoryMatchesResponses = new ArrayList<>();
-
-        //o for abaixo pode ser excluido e colocado no abaixo desse.
-        for (int i = 0; i < 10;i++){
-            listOfMatches.add(summonerClient.getMatchDetails(Long.toString(matches.get(i).getGameId()),apiKey));
-        }
-        for (int l = 0; l < listOfMatches.size() ; l++){
-        participants = listOfMatches.get(l).getParticipantIdentities();
-            for (int i = 0; i < 10 ;i++){
-                if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summoner.getName())) == 0) {
-                    for (int k = 0; k < 10 ;k++) {
-                        if ((participants.get(i).getParticipantId()) == (listOfMatches.get(l).getParticipants().get(k).getParticipantId())) {
-                            List<Integer> globalFrag = getGlobalFrag( listOfMatches.get(l).getParticipants(), listOfMatches.get(l).getParticipants().get(k).getTeamId());
-                            String frag = listOfMatches.get(l).getParticipants().get(k).getStats().getKills()+"/"+listOfMatches.get(l).getParticipants().get(k).getStats().getDeaths()+"/"+listOfMatches.get(l).getParticipants().get(k).getStats().getAssists();
-                            float kda = (( (float) listOfMatches.get(l).getParticipants().get(k).getStats().getKills() +  (float) listOfMatches.get(l).getParticipants().get(k).getStats().getAssists())/ (float) listOfMatches.get(l).getParticipants().get(k).getStats().getDeaths());
-                            String pKillls = ((listOfMatches.get(l).getParticipants().get(k).getStats().getKills() + listOfMatches.get(l).getParticipants().get(k).getStats().getAssists())*100)/globalFrag.get(0) + "%";
-                            listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
-                                    .frag(frag)
-                                    .kda(new DecimalFormat("#0.##").format( kda ))
-                                    .champion(getChampion(listOfMatches.get(l).getParticipants().get(k).getChampionId()))
-                                    .win(listOfMatches.get(l).getParticipants().get(k).getStats().isWin())
-                                    .time((listOfMatches.get(l).getGameDuration()/60)+" min.")
-                                    .visionScore(listOfMatches.get(l).getParticipants().get(k).getStats().getVisionScore())
-                                    .pKills(pKillls)
-                                    .build());
-                        }
-                    }
-                }
-            }
+        //o for abaixo seria melhor com um foreach
+        for (int l = 0; l < 10 ; l++){
+            MatchResponse match = summonerClient.getMatchDetails(Long.toString(matches.get(l).getGameId()),apiKey);
+            List<MatchParticipantsIdentitiesResponse> participants = match.getParticipantIdentities();
+            int idxParticipantId = getIdxOfParticipant(participants, summoner);
+            listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
+                    .frag(getFrag(match.getParticipants().get(idxParticipantId).getStats().getKills(),match.getParticipants().get(idxParticipantId).getStats().getAssists(),match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
+                    .kda(calculateKDA(match.getParticipants().get(idxParticipantId).getStats().getKills(), match.getParticipants().get(idxParticipantId).getStats().getAssists(), match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
+                    .champion(getChampionName(match.getParticipants().get(idxParticipantId).getChampionId(), championsListResponse))
+                    .win(match.getParticipants().get(idxParticipantId).getStats().isWin())
+                    .time((match.getGameDuration()/60)+" min.")
+                    .visionScore(match.getParticipants().get(idxParticipantId).getStats().getVisionScore())
+                    .pKills(calculatePKills(match.getParticipants().get(idxParticipantId).getStats().getKills(), match.getParticipants().get(idxParticipantId).getStats().getAssists(),(getGlobalFrag( match.getParticipants(), match.getParticipants().get(idxParticipantId).getTeamId())).get(0)))
+                    .build());
         }
        return listHistoryMatchesResponses;
     }
 
-    private String getChampion(int champId){
+    private String getFrag(int kills, int assists, int deaths){
+        return kills+"/"+deaths+"/"+assists;
+    }
+
+    private String calculatePKills(int kills, int assists,int globalFrag){
+        return ((kills + assists)*100)/globalFrag + "%";
+    }
+
+    private String calculateKDA(int kills, int assists, int deaths){
+        return new DecimalFormat("#0.##").format( ( (float) kills +  (float) assists)/ (float) deaths );
+    }
+    private String getChampionName(int champId,String championsListResponse){
         ObjectMapper objectMapper = new ObjectMapper();
-        String championsListResponse = championClient.getChampions();
         String champName = "";
         String champKey = "";
 
@@ -136,6 +129,7 @@ public class SummonerServiceImpl implements SummonerService {
         return champName;
     }
 
+
     private List<Integer> getGlobalFrag(List<MatchParticipantsResponse> participants, int teamId){
         List<Integer> frag = new ArrayList<>();
         int deaths = 0;
@@ -155,5 +149,13 @@ public class SummonerServiceImpl implements SummonerService {
         return frag;
     }
 
-
+    private int getIdxOfParticipant(List<MatchParticipantsIdentitiesResponse> participants, Summoner summoner){
+        int aux=-1,i;
+        for(i = 0; i < 10 ;i++){
+            if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summoner.getName())) == 0) {
+                aux = i;
+            }
+        }
+        return aux;
+    }
 }
