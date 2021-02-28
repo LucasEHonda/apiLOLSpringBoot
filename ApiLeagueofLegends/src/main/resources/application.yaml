@@ -1,2 +1,5 @@
 api-lol:
   api-key: "RGAPI-49770d6c-0e0b-4e24-bf77-8172e01dd70b"
+
+server:
+  port : 80
