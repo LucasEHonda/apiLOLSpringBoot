@@ -2,14 +2,10 @@ package com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl;
 
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.client.ChampionClient;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.*;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.spec.SummonerService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,21 +23,17 @@ public class SummonerServiceImpl implements SummonerService {
     SummonerClient summonerClient;
 
     @Autowired
-    ChampionClient championClient;
-
-
-    //String championsListResponse = championClient.getChampions();
+    ChampionServiceImpl championService;
 
     @Override
-    public String getNamePlusLevel(String summonerName) {
-        Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
-        return (summoner.getName() + " " + "Nivel: " + summoner.getSummonerLevel());
+    public Summoner getNamePlusLevel(String summonerName) {
+        return summonerClient.getSummonerByName(summonerName,apiKey);
+        //return (summoner.getName() + " " + "Nivel: " + summoner.getSummonerLevel());
     }
 
     public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName){
 
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
-        String championsListResponse = championClient.getChampions();
         SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
         List<MatchListResponse> matches = summonerHistory.getMatches();
         List<Integer> lastTenMatches = new ArrayList<>();
@@ -67,13 +59,12 @@ public class SummonerServiceImpl implements SummonerService {
             //Aqui nos separamos em duas listas o dict feito acima.
         }
 
-        String champName = getChampionName(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed))),championsListResponse);
+        String champName = getChampionName(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))));
 
         return LastTenMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
 }
 
     public List<HistoryMatchesResponse> getMatchDetailsBySummonerName(String summonerName){
-        String championsListResponse = championClient.getChampions();
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
         List<MatchListResponse> matches = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey).getMatches();
         List<HistoryMatchesResponse> listHistoryMatchesResponses = new ArrayList<>();
@@ -85,7 +76,7 @@ public class SummonerServiceImpl implements SummonerService {
             listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
                     .frag(getFrag(match.getParticipants().get(idxParticipantId).getStats().getKills(),match.getParticipants().get(idxParticipantId).getStats().getAssists(),match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
                     .kda(calculateKDA(match.getParticipants().get(idxParticipantId).getStats().getKills(), match.getParticipants().get(idxParticipantId).getStats().getAssists(), match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
-                    .champion(getChampionName(match.getParticipants().get(idxParticipantId).getChampionId(), championsListResponse))
+                    .champion(getChampionName(Integer.toString(match.getParticipants().get(idxParticipantId).getChampionId())))
                     .win(match.getParticipants().get(idxParticipantId).getStats().isWin())
                     .time((match.getGameDuration()/60)+" min.")
                     .visionScore(match.getParticipants().get(idxParticipantId).getStats().getVisionScore())
@@ -95,41 +86,28 @@ public class SummonerServiceImpl implements SummonerService {
        return listHistoryMatchesResponses;
     }
 
+
+
     private String getFrag(int kills, int assists, int deaths){
         return kills+"/"+deaths+"/"+assists;
     }
-
     private String calculatePKills(int kills, int assists,int globalFrag){
-        return ((kills + assists)*100)/globalFrag + "%";
-    }
-
-    private String calculateKDA(int kills, int assists, int deaths){
-        return new DecimalFormat("#0.##").format( ( (float) kills +  (float) assists)/ (float) deaths );
-    }
-    private String getChampionName(int champId,String championsListResponse){
-        ObjectMapper objectMapper = new ObjectMapper();
-        String champName = "";
-        String champKey = "";
-
-
-        try {
-            JsonNode jsonnode = objectMapper.readTree(championsListResponse);
-            for (Iterator<String> it = jsonnode.get("data").fieldNames(); it.hasNext();) {
-                String champ = it.next();
-                champName =jsonnode.get("data").get(champ).get("name").asText();
-                champKey = jsonnode.get("data").get(champ).get("key").asText();
-                if (champKey.equals(Integer.toString(champId))){
-                    //Aqui nos fazemos o request para a API para descobrir qual o champ pelo ID dele.
-                    break;
-                }
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
+        if(globalFrag == 0){
+            return "0%";
+        }else{
+            return ((kills + assists)*100)/globalFrag + "%";
         }
-        return champName;
     }
-
-
+    private String calculateKDA(int kills, int assists, int deaths){
+        if(deaths==0){
+            return Integer.toString(kills + assists);
+        }else{
+            return new DecimalFormat("#0.##").format( ( (float) kills +  (float) assists)/ (float) deaths );
+        }
+    }
+    private String getChampionName(String champId){
+        return championService.getById(champId).getName();
+    }
     private List<Integer> getGlobalFrag(List<MatchParticipantsResponse> participants, int teamId){
         List<Integer> frag = new ArrayList<>();
         int deaths = 0;
@@ -148,7 +126,6 @@ public class SummonerServiceImpl implements SummonerService {
         frag.add(assists);
         return frag;
     }
-
     private int getIdxOfParticipant(List<MatchParticipantsIdentitiesResponse> participants, Summoner summoner){
         int aux=-1,i;
         for(i = 0; i < 10 ;i++){
