@@ -38,4 +38,4 @@ public class SummonerControllerImpl implements SummonerController {
         return summonerService.getMatchDetailsBySummonerName(summonerName);
     }
 
-    }
+}

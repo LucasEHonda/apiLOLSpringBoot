@@ -2,10 +2,14 @@ spring:
   data:
     mongodb:
       uri: mongodb://localhost/champions
+  devtools:
+    remote:
+      secret: 123
 #spring.data.mongodb.username=
 #spring.data.mongodb.password=
 api-lol:
-  api-key: "RGAPI-61eedb29-591e-4fcf-81b2-cc11c1e80c72"
+  api-key: "RGAPI-88fda7d5-10bd-4d3f-ae1b-555d0f63d415"
 
 #server:
   #port : 80
+

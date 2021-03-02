@@ -9,4 +9,5 @@ public class LastTenMatchesResponse {
     String summonerName;
     int matchesPlayedLastTenDays;
     String mustPlayedChamp;
+    String averageTimeSpent;
 }

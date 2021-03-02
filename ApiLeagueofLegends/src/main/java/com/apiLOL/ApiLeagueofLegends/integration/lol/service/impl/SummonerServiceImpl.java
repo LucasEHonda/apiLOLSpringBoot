@@ -61,7 +61,7 @@ public class SummonerServiceImpl implements SummonerService {
 
         String champName = getChampionName(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))));
 
-        return LastTenMatchesResponse.builder().summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
+        return LastTenMatchesResponse.builder().averageTimeSpent(((lastTenMatches.size()*30)/60)+"h").summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
 }
 
     public List<HistoryMatchesResponse> getMatchDetailsBySummonerName(String summonerName){
