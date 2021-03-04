@@ -1,14 +1,20 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost/champions
+       uri: mongodb+srv://root:9O5Q2XmocGJum391@cluster0.4bqt4.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+#      host: 172.19.0.2
+#      port: 27017
+#      database: loldb
+#      username: root
+#      password: 9O5Q2XmocGJum391
+
   devtools:
     remote:
       secret: 123
 #spring.data.mongodb.username=
 #spring.data.mongodb.password=
 api-lol:
-  api-key: "RGAPI-88fda7d5-10bd-4d3f-ae1b-555d0f63d415"
+  api-key: "RGAPI-1d4b10a2-386d-43b2-a679-ce15843e38b2"
 
 #server:
   #port : 80
