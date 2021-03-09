@@ -28,7 +28,6 @@ public class SummonerServiceImpl implements SummonerService {
     @Override
     public Summoner getNamePlusLevel(String summonerName) {
         return summonerClient.getSummonerByName(summonerName,apiKey);
-        //return (summoner.getName() + " " + "Nivel: " + summoner.getSummonerLevel());
     }
 
     public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName){

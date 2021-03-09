@@ -4,6 +4,7 @@ import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.api.spec.SummonerController;
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
+import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl.SummonerServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -19,6 +20,9 @@ public class SummonerControllerImpl implements SummonerController {
 
     @Autowired
     SummonerServiceImpl summonerService;
+
+    @Autowired
+    SummonerClient summonerClient;
 
     @Override
     @GetMapping( path = "account/{summonerName}")

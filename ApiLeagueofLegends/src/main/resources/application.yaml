@@ -14,7 +14,7 @@ spring:
 #spring.data.mongodb.username=
 #spring.data.mongodb.password=
 api-lol:
-  api-key: "RGAPI-1d4b10a2-386d-43b2-a679-ce15843e38b2"
+  api-key: "RGAPI-d90a124c-f09e-4e92-843c-bc8bf2b094cc"
 
 #server:
   #port : 80
