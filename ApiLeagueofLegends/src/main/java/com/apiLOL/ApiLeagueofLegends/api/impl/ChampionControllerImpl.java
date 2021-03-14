@@ -1,7 +1,7 @@
 package com.apiLOL.ApiLeagueofLegends.api.impl;
 
 import com.apiLOL.ApiLeagueofLegends.api.spec.ChampionController;
-import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.ChampionResponse;
+import com.apiLOL.ApiLeagueofLegends.domain.Champion;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl.ChampionServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ public class ChampionControllerImpl implements ChampionController {
     ChampionServiceImpl championService;
 
     @PostMapping
-    public ChampionResponse newChampion(@RequestBody ChampionResponse champion) {
+    public Champion newChampion(@RequestBody Champion champion) {
         return championService.newChampion(champion);
     }
 }

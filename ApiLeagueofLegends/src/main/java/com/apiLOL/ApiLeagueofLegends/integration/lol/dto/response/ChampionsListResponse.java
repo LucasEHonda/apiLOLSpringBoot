@@ -1,5 +1,6 @@
 package com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response;
 
+import com.apiLOL.ApiLeagueofLegends.domain.Champion;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,5 +12,5 @@ public class ChampionsListResponse {
     String format;
     String type;
     String version;
-    List<ChampionResponse> data;
+    List<Champion> data;
 }
