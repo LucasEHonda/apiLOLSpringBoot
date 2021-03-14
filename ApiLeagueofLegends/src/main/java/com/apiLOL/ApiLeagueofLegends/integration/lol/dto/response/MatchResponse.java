@@ -8,6 +8,8 @@ import java.util.List;
 @Data
 @Builder
 public class MatchResponse {
+    long gameLength;
+    long gameStartTime;
     long gameCreation;
     int gameDuration;
     long gameId;

@@ -12,6 +12,7 @@ public class MatchParticipantsResponse {
     int participantId;
     int spell1Id;
     int spell2Id;
+    String summonerName;
     ParticipantsStatsResponse stats;
     int teamId;
 }

@@ -1,6 +1,8 @@
 package com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl;
 
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.MatchOnInfoResponse;
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.SummonerResponse;
 import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
@@ -85,6 +87,25 @@ public class SummonerServiceImpl implements SummonerService {
        return listHistoryMatchesResponses;
     }
 
+    public MatchOnInfoResponse getActiveMatch(String summonerName){
+
+        MatchResponse matchResponse = summonerClient.getMatchOn(summonerClient.getSummonerByName(summonerName,apiKey).getId(),apiKey);
+        List<SummonerResponse>summoners = new ArrayList<>();
+
+        for (int i = 0; i < matchResponse.getParticipants().size(); i++) {
+            summoners.add(SummonerResponse.builder()
+                    .championName(getChampionName(Integer.toString(matchResponse.getParticipants().get(i).getChampionId())))
+                    .rankedInfos(summonerClient.getRankedInfo(summonerClient.getSummonerByName(matchResponse.getParticipants().get(i).getSummonerName(),apiKey).getId(),apiKey))
+                    .team((matchResponse.getParticipants().get(i).getTeamId() == 100) ? "Blue Team" : "Red Team")
+                    .summonerName(matchResponse.getParticipants().get(i).getSummonerName())
+                    .build());
+        }
+        return MatchOnInfoResponse.builder().summoners(summoners).gameMode("5x5 Summoner's Rift").gameDuration(Integer.toString((int) matchResponse.getGameLength()/60)).gameStartTime((new Date(matchResponse.getGameStartTime())) + ".").build();
+    }
+
+    public List<RankedInfoResponse> getRankedInfo(String summonerName){
+        return summonerClient.getRankedInfo(summonerClient.getSummonerByName(summonerName,apiKey).getId(),apiKey);
+    }
 
 
     private String getFrag(int kills, int assists, int deaths){

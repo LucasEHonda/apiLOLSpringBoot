@@ -1,10 +1,12 @@
 package com.apiLOL.ApiLeagueofLegends.api.impl;
 
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.HistoryMatchesResponse;
+import com.apiLOL.ApiLeagueofLegends.api.dto.response.MatchOnInfoResponse;
 import com.apiLOL.ApiLeagueofLegends.api.spec.SummonerController;
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
+import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.MatchResponse;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.impl.SummonerServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -40,6 +42,11 @@ public class SummonerControllerImpl implements SummonerController {
     @GetMapping(path = "historico/detalhes/{summonerName}")
     public List<HistoryMatchesResponse> getMatchDetails(@PathVariable("summonerName") String summonerName){
         return summonerService.getMatchDetailsBySummonerName(summonerName);
+    }
+
+    @GetMapping(path = "account/match/{summonerName}")
+    public MatchOnInfoResponse getActiveMatch(@PathVariable("summonerName") String summonerName){
+        return summonerService.getActiveMatch(summonerName);
     }
 
 }
