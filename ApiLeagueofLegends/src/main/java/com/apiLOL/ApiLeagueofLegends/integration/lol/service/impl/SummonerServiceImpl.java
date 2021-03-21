@@ -7,6 +7,7 @@ import com.apiLOL.ApiLeagueofLegends.domain.Summoner;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.client.SummonerClient;
 import com.apiLOL.ApiLeagueofLegends.api.dto.response.LastTenMatchesResponse;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.dto.response.*;
+import com.apiLOL.ApiLeagueofLegends.integration.lol.service.spec.MatchEngine;
 import com.apiLOL.ApiLeagueofLegends.integration.lol.service.spec.SummonerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class SummonerServiceImpl implements SummonerService {
@@ -26,6 +29,9 @@ public class SummonerServiceImpl implements SummonerService {
 
     @Autowired
     ChampionServiceImpl championService;
+
+    @Autowired
+    MatchEngine matchEngine;
 
     @Override
     public Summoner getNamePlusLevel(String summonerName) {
@@ -49,6 +55,7 @@ public class SummonerServiceImpl implements SummonerService {
         Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
         SummonerMatchListResponse summonerHistory = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey);
         List<MatchListResponse> matches = summonerHistory.getMatches();
+        // LISTA DE IDS de campeões
         List<Integer> lastTenMatches = new ArrayList<>();
         Map<Integer, Integer> champCount = new TreeMap<>();
         List<Integer> timesPlayed = new ArrayList<>();
@@ -58,21 +65,26 @@ public class SummonerServiceImpl implements SummonerService {
         //long matchesPlayed = matches.stream().filter(match -> ((dataAgora.getTime() - match.getTimestamp()) / (1000*60*60*24)) <= 10 ).count();
         //Aqui nos contamos o numero de partidas nos ultimos 10 dias.
 
-        for (int i = 0; i<matches.size();i++){
-            if (((dataAgora.getTime() - matches.get(i).getTimestamp()) / (1000*60*60*24)) <= 10){
-                lastTenMatches.add(matches.get(i).getChampion());
+        for (MatchListResponse match : matches) {
+            if (((dataAgora.getTime() - match.getTimestamp()) / (1000 * 60 * 60 * 24)) <= 10) {
+                lastTenMatches.add(match.getChampion());
                 //Aqui nos armazenamos numa lista numero de partidas nos ultimos 10.
             }
         }
-        lastTenMatches.forEach(champion -> champCount.compute(champion, (k, v) -> v == null ? 1 : ++v));
-        //Aqui nos armazenamos num dict o numero de partidas jogadas por campeao nos ultimos 10 dias.
-        for (Map.Entry<Integer, Integer> champion : champCount.entrySet()) {
-            timesPlayed.add(champion.getValue());
-            championId.add(champion.getKey());
-            //Aqui nos separamos em duas listas o dict feito acima.
-        }
 
-        String champName = getChampionName(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))));
+        // Contagem de campeões usados, pode ser ordenado também.
+        Map<Integer, Long> countChampions = lastTenMatches.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+//        lastTenMatches.forEach(champion -> champCount.compute(champion, (k, v) -> v == null ? 1 : ++v));
+//
+//        //Aqui nos armazenamos num dict o numero de partidas jogadas por campeao nos ultimos 10 dias.
+//        for (Map.Entry<Integer, Integer> champion : champCount.entrySet()) {
+//            timesPlayed.add(champion.getValue());
+//            championId.add(champion.getKey());
+//            //Aqui nos separamos em duas listas o dict feito acima.
+//        }
+
+        String champName = championService.getChampionName(Integer.toString(championId.get(timesPlayed.indexOf(Collections.max(timesPlayed)))));
 
         return LastTenMatchesResponse.builder().averageTimeSpent(((lastTenMatches.size()*30)/60)+"h").summonerName(summoner.getName()).matchesPlayedLastTenDays(lastTenMatches.size()).mustPlayedChamp(champName).build();
 }
@@ -82,19 +94,15 @@ public class SummonerServiceImpl implements SummonerService {
         List<MatchListResponse> matches = summonerClient.getMatchLIstByAccountID(summoner.getAccountId(),apiKey).getMatches();
         List<HistoryMatchesResponse> listHistoryMatchesResponses = new ArrayList<>();
         //o for abaixo seria melhor com um foreach
-        for (int l = 0; l < 10 ; l++){
-            MatchResponse match = summonerClient.getMatchDetails(Long.toString(matches.get(l).getGameId()),apiKey);
-            List<MatchParticipantsIdentitiesResponse> participants = match.getParticipantIdentities();
-            int idxParticipantId = getIdxOfParticipant(participants, summoner);
-            listHistoryMatchesResponses.add(HistoryMatchesResponse.builder()
-                    .frag(getFrag(match.getParticipants().get(idxParticipantId).getStats().getKills(),match.getParticipants().get(idxParticipantId).getStats().getAssists(),match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
-                    .kda(calculateKDA(match.getParticipants().get(idxParticipantId).getStats().getKills(), match.getParticipants().get(idxParticipantId).getStats().getAssists(), match.getParticipants().get(idxParticipantId).getStats().getDeaths()))
-                    .champion(getChampionName(Integer.toString(match.getParticipants().get(idxParticipantId).getChampionId())))
-                    .win(match.getParticipants().get(idxParticipantId).getStats().isWin())
-                    .time((match.getGameDuration()/60)+" min.")
-                    .visionScore(match.getParticipants().get(idxParticipantId).getStats().getVisionScore())
-                    .pKills(calculatePKills(match.getParticipants().get(idxParticipantId).getStats().getKills(), match.getParticipants().get(idxParticipantId).getStats().getAssists(),(getGlobalFrag( match.getParticipants(), match.getParticipants().get(idxParticipantId).getTeamId())).get(0)))
-                    .build());
+
+        for (MatchListResponse match: matches) {
+            MatchResponse matchDetails = summonerClient.getMatchDetails(Long.toString(match.getGameId()), apiKey);
+            Optional<MatchParticipantsResponse> playerInMatch = matchDetails.getParticipants()
+                .stream()
+                .filter(p -> p.getSummonerName().equals(summonerName)).findFirst();
+
+            playerInMatch.ifPresent(matchParticipantsResponse ->
+            listHistoryMatchesResponses.add(matchEngine.buildMatchInfo(matchParticipantsResponse, matchDetails, matchDetails.getParticipants())));
         }
        return listHistoryMatchesResponses;
     }
@@ -106,7 +114,7 @@ public class SummonerServiceImpl implements SummonerService {
 
         for (int i = 0; i < matchResponse.getParticipants().size(); i++) {
             summoners.add(SummonerResponse.builder()
-                    .championName(getChampionName(Integer.toString(matchResponse.getParticipants().get(i).getChampionId())))
+                    .championName(championService.getChampionName(Integer.toString(matchResponse.getParticipants().get(i).getChampionId())))
                     .rankedInfos(summonerClient.getRankedInfo(summonerClient.getSummonerByName(matchResponse.getParticipants().get(i).getSummonerName(),apiKey).getId(),apiKey))
                     .team((matchResponse.getParticipants().get(i).getTeamId() == 100) ? "Blue Team" : "Red Team")
                     .summonerName(matchResponse.getParticipants().get(i).getSummonerName())
@@ -117,54 +125,5 @@ public class SummonerServiceImpl implements SummonerService {
 
     public List<RankedInfoResponse> getRankedInfo(String summonerName){
         return summonerClient.getRankedInfo(summonerClient.getSummonerByName(summonerName,apiKey).getId(),apiKey);
-    }
-
-
-    private String getFrag(int kills, int assists, int deaths){
-        return kills+"/"+deaths+"/"+assists;
-    }
-    private String calculatePKills(int kills, int assists,int globalFrag){
-        if(globalFrag == 0){
-            return "0%";
-        }else{
-            return ((kills + assists)*100)/globalFrag + "%";
-        }
-    }
-    private String calculateKDA(int kills, int assists, int deaths){
-        if(deaths==0){
-            return Integer.toString(kills + assists);
-        }else{
-            return new DecimalFormat("#0.##").format( ( (float) kills +  (float) assists)/ (float) deaths );
-        }
-    }
-    private String getChampionName(String champId){
-        return championService.getById(champId).getName();
-    }
-    private List<Integer> getGlobalFrag(List<MatchParticipantsResponse> participants, int teamId){
-        List<Integer> frag = new ArrayList<>();
-        int deaths = 0;
-        int kills = 0;
-        int assists = 0;
-
-        for (int i = 0;i< participants.size();i++){
-            if(participants.get(i).getTeamId() == teamId){
-                deaths = deaths + participants.get(i).getStats().getDeaths();
-                kills = kills + participants.get(i).getStats().getKills();
-                assists = assists + participants.get(i).getStats().getAssists();
-            }
-        }
-        frag.add(kills);
-        frag.add(deaths);
-        frag.add(assists);
-        return frag;
-    }
-    private int getIdxOfParticipant(List<MatchParticipantsIdentitiesResponse> participants, Summoner summoner){
-        int aux=-1,i;
-        for(i = 0; i < 10 ;i++){
-            if(((participants.get(i).getPlayer().getSummonerName()).compareTo(summoner.getName())) == 0) {
-                aux = i;
-            }
-        }
-        return aux;
     }
 }

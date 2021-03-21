@@ -22,4 +22,8 @@ public class ChampionServiceImpl implements ChampionService {
            return this.championRepository.save(champion);
     }
 
+    public String getChampionName(String champId){
+        return this.getById(champId).getName();
+    }
+
 }
