@@ -29,7 +29,19 @@ public class SummonerServiceImpl implements SummonerService {
 
     @Override
     public Summoner getNamePlusLevel(String summonerName) {
-        return summonerClient.getSummonerByName(summonerName,apiKey);
+        Summoner summoner = summonerClient.getSummonerByName(summonerName,apiKey);
+
+        return Summoner.builder()
+                .summonerName(summoner.getSummonerName())
+                .name(summoner.getName())
+                .summonerLevel(summoner.getSummonerLevel())
+                .id(summoner.getId())
+                .accountId(summoner.getAccountId())
+                .puuid(summoner.getPuuid())
+                .profileIconId(summoner.getProfileIconId())
+                .revisionDate(summoner.getRevisionDate())
+                .rankeds(summonerClient.getRankedInfo(summoner.getId(),apiKey)).build();
+
     }
 
     public LastTenMatchesResponse getLastTenMatchQuantity(String summonerName){
